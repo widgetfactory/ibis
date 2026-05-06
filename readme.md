@@ -1,11 +1,12 @@
-# TinyMCE for the JCE Editor
+# Ibis Editor
+A wysiwyg editor engine for JCE Pro
 
 ## Copyright
 
 - Copyright (c) 1999 – 2015 Ephox Corporation. All rights reserved.  
 - Copyright (c) 2009        Moxiecode Systems AB. All rights reserved.
 - Copyright (c) 2022 - 2025 Ephox Corporation DBA Tiny Technologies, Inc.
-- Copyright (c) 2025        Ryan Demmer. All rights reserved.
+- Copyright (c) 2025 - 2026 Ryan Demmer. All rights reserved.
 
 ## Upstream Licenses
 
