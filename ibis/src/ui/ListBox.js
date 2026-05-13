@@ -747,6 +747,10 @@
       this.onPostRender.dispatch(this, DOM.get(this.id));
 
       this.rendered = true;
+
+      if (this.settings.value) {
+        this.value(this.settings.value);
+      }
     },
 
     /**
