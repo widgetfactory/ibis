@@ -1168,7 +1168,8 @@
       if (n) {
 
         // Use getBoundingClientRect if it exists since it's faster than looping offset nodes
-        if (ro === body && n.getBoundingClientRect && self.getStyle(body, 'position') === 'static') {
+        // Must check the computed style (pass true) — inline style is '' when unset, not 'static'
+        if (ro === body && n.getBoundingClientRect && self.getStyle(body, 'position', true) === 'static') {
           n = n.getBoundingClientRect();
           e = self.boxModel ? d.documentElement : d.body;
 
