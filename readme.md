@@ -1,5 +1,5 @@
 # Ibis Editor
-A wysiwyg editor engine for JCE Pro
+A wysiwyg editor engine for JCE Pro forked from Tinymce
 
 ## Copyright
 
