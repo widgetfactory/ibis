@@ -30,8 +30,8 @@
         settings = this.settings,
         i;
 
-      if (settings.label) {
-        html += '<legend>' + dom.encode(settings.label) + '</legend>';
+      if (settings.legend) {
+        html += '<legend>' + dom.encode(settings.legend) + '</legend>';
       }
 
       for (i = 0; i < this.controls.length; i++) {
