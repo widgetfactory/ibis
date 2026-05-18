@@ -151,6 +151,30 @@
       }
     },
 
+    setDisabled: function (state) {
+      this._super(state);
+
+      var openBtn = DOM.get(this.id + '_open');
+      if (openBtn) {
+        openBtn.disabled = !!state;
+      }
+
+      // _text is a button only in standard (non-combobox, non-multiple) mode
+      if (!this.settings.combobox && !this.settings.multiple) {
+        var textBtn = DOM.get(this.id + '_text');
+        if (textBtn) {
+          textBtn.disabled = !!state;
+        }
+      }
+
+      if (this.settings.combobox) {
+        var input = DOM.get(this.id + '_input');
+        if (input) {
+          input.disabled = !!state;
+        }
+      }
+    },
+
     /**
      * Selects a item/option by value. This will both add a visual selection to the
      * item and change the title of the control to the title of the option.
@@ -192,8 +216,8 @@
       }
 
       if (ibis.is(values, 'string')) {
-        if (self.settings.multiple && self.settings.seperator) {
-          values = values.split(self.settings.seperator);
+        if (self.settings.multiple && self.settings.separator) {
+          values = values.split(self.settings.separator);
         } else {
           values = [values];
         }
@@ -212,17 +236,25 @@
         self.selectByIndex(i);
       });
 
-      // clear combobox and add a tag for each selected item
+      // rebuild tags for combobox or multiple mode
       if (this.settings.combobox) {
         this.clearComboBox(true);
-
-        if (this.settings.multiple) {
-          each(this.items, function (item) {
-            if (item.selected) {
-              self.addTag(item.value);
-            }
-          });
+        each(this.items, function (item) {
+          if (item.selected) {
+            self.addTag(item.value);
+          }
+        });
+      } else if (this.settings.multiple) {
+        DOM.remove(DOM.select('.mceButtonTag', self.id + '_text'));
+        var titleSpan = DOM.select('.mceTitle', self.id + '_text')[0];
+        if (titleSpan) {
+          titleSpan.style.display = '';
         }
+        each(this.items, function (item) {
+          if (item.selected) {
+            self.addTag(item.value);
+          }
+        });
       }
     },
 
@@ -236,7 +268,7 @@
           }
         });
 
-        return val.join(' ').trim();
+        return val.join(this.settings.separator || ' ').trim();
       }
 
       this.select(val);
@@ -265,7 +297,7 @@
           this.selectedValue = null;
         }
 
-        if (!this.settings.combobox) {
+        if (!this.settings.combobox && !this.settings.multiple) {
           DOM.setHTML(elm, DOM.encode(item.title));
           DOM.removeClass(elm, 'mceTitle');
           DOM.setAttrib(this.id, 'aria-valuenow', item.title);
@@ -276,14 +308,21 @@
         }
 
       } else {
-        DOM.setHTML(elm, DOM.encode(this.settings.title));
-        DOM.addClass(elm, 'mceTitle');
-        this.selectedValue = null;
+        if (!this.settings.multiple) {
+          DOM.setHTML(elm, DOM.encode(this.settings.title));
+          DOM.addClass(elm, 'mceTitle');
+        }
 
+        this.selectedValue = null;
         DOM.setAttrib(this.id, 'aria-valuenow', this.settings.title);
 
         if (self.settings.multiple) {
           self.deselectAll();
+          DOM.remove(DOM.select('.mceButtonTag', self.id + '_text'));
+          var titleSpan = DOM.select('.mceTitle', self.id + '_text')[0];
+          if (titleSpan) {
+            titleSpan.style.display = '';
+          }
         }
       }
     },
@@ -365,6 +404,11 @@
           class: 'mceComboBox'
         }, inp);
 
+      } else if (this.settings.multiple) {
+        html += DOM.createHTML('div', {
+          id: this.id + '_text',
+          class: 'mceText mceComboBox'
+        }, DOM.createHTML('span', { 'class': 'mceTitle' }, DOM.encode(this.settings.title)));
       } else {
         html += DOM.createHTML('button', {
           type: 'button',
@@ -414,27 +458,49 @@
           if (self.selectedValue == item.value) {
             self.selectedValue = null;
           }
+
+          if (self.menu && self.menu.items[item.id]) {
+            self.menu.selectItem(self.menu.items[item.id], false);
+          }
         }
       });
 
       Event.clear(btn);
       DOM.remove(btn);
+
+      if (self.settings.multiple && !self.settings.combobox) {
+        var remaining = DOM.select('.mceButtonTag', self.id + '_text');
+        if (!remaining.length) {
+          var titleSpan = DOM.select('.mceTitle', self.id + '_text')[0];
+          if (titleSpan) {
+            titleSpan.style.display = '';
+          }
+        }
+      }
     },
 
     addTag: function (value) {
       var self = this, btn, inp;
-
-      inp = DOM.get(self.id + '_input');
 
       btn = DOM.create('button', {
         'class': 'mceButton mceButtonTag',
         'value': value
       }, '<label>' + value + '</label>');
 
-      DOM.insertBefore(btn, inp);
+      inp = DOM.get(self.id + '_input');
+
+      if (inp) {
+        DOM.insertBefore(btn, inp);
+      } else {
+        var titleSpan = DOM.select('.mceTitle', self.id + '_text')[0];
+        if (titleSpan) {
+          DOM.insertBefore(btn, titleSpan);
+          titleSpan.style.display = 'none';
+        }
+      }
 
       Event.add(btn, 'click', function (evt) {
-        evt.preventDefault();
+        Event.cancel(evt);
 
         if (evt.target.nodeName == 'LABEL') {
           return;
@@ -510,7 +576,7 @@
       }
 
       // Prevent double toggles by canceling the mouse click event to the button
-      if (e && e.type == "mousedown" && (e.target.id == this.id + '_text' || e.target.id == this.id + '_open')) {
+      if (e && e.type == "mousedown" && (DOM.getParent(e.target, '#' + this.id + '_text') || DOM.getParent(e.target, '#' + this.id + '_open'))) {
         return;
       }
 
@@ -639,30 +705,31 @@
         }
       });
 
-      Event.add(this.id + '_input', 'keyup', function (evt) {
+      if (this.settings.combobox) {
+        Event.add(this.id + '_input', 'keyup', function (evt) {
 
-        setTimeout(function () {
-          var value = evt.target.value;
+          setTimeout(function () {
+            var value = evt.target.value;
 
-          if (!value) {
-            Event.cancel(evt);
-            self.hideMenu();
-            return;
-          }
-
-          if (!specialKeyCodeMap[evt.keyCode]) {
-            if (!self.menu || !self.menu.isMenuVisible) {
-              self.showMenu();
+            if (!value) {
+              Event.cancel(evt);
+              self.hideMenu();
+              return;
             }
 
-            evt.target.focus();
+            if (!specialKeyCodeMap[evt.keyCode]) {
+              if (!self.menu || !self.menu.isMenuVisible) {
+                self.showMenu();
+              }
 
-            self.menu.filterItems(value);
-          }
-        }, 0);
-      });
+              evt.target.focus();
 
-      Event.add(this.id + '_input', 'keydown', function (evt) {
+              self.menu.filterItems(value);
+            }
+          }, 0);
+        });
+
+        Event.add(this.id + '_input', 'keydown', function (evt) {
         switch (evt.keyCode) {
           // enter
           case 13:
@@ -711,7 +778,8 @@
 
             break;
         }
-      });
+        });
+      } // end combobox input handlers
 
       Event.add(this.id, 'focus', function () {
         if (!this._focused) {
