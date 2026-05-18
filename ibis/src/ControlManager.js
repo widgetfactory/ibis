@@ -465,6 +465,90 @@
     },
 
     /**
+     * Creates a BorderBox control instance by id.
+     * Child controls are created first (each factory applies the prefix internally),
+     * then the BorderBox id is prefixed, and children are added to the container.
+     * 
+     * @method createBorderBox
+     * @param {String} id Unique id for the new BorderBox instance.
+     * @param {Object} s Optional settings object for the BorderBox.
+     * @returns {ibis.ui.BorderBox} BorderBox instance that got created and added.
+     */
+    createBorderBox: function (id, s) {
+      var self = this, ed = self.editor, c;
+
+      c = self.get(id);
+
+      if (c) {
+        return c;
+      }
+
+      s = extend({
+        widths: ['thin', 'medium', 'thick', '1px', '2px', '3px', '4px', '5px'],
+        styles: ['solid', 'dashed', 'dotted', 'double', 'groove', 'ridge', 'inset', 'outset']
+      }, s);
+
+      var enableCtrl = self.createCheckBox(id + '_enabled', {
+        label_position: 'after'
+      });
+
+      var widthCtrl = self.createListBox(id + '_width', {
+        name: 'border_width',
+        label: 'Width',
+        combobox: true,
+        onselect: function () { }
+      });
+
+      widthCtrl.add('', '');
+
+      each(s.widths, function (w) { 
+        widthCtrl.add(w, w); 
+      });
+
+      var styleCtrl = self.createListBox(id + '_style', {
+        name: 'border_style',
+        label: 'Style',
+        filter: true,
+        onselect: function () { }
+      });
+
+      styleCtrl.add('', '');
+
+      each(s.styles, function (st) { 
+        styleCtrl.add(st, st); 
+      });
+
+      var colorCtrl = self.createTextBox(id + '_color', {
+        name: 'border_color',
+        subtype: 'color',
+        label: 'Color',
+        colorpicker: function () {
+          var self = this, value = self.value();
+
+          ed.settings.color_picker_callback(function (color) {
+            self.value(color);
+          }, value);
+        }
+      });
+
+      s.label = ed.translate(s.label);
+      s.scope = s.scope || ed;
+
+      id = self.prefix + id;
+
+      s = extend({ 'class': 'mce_' + id, scope: s.scope, control_manager: self }, s);
+
+      c = new ibis.ui.BorderBox(id, s, ed);
+
+      c.add(enableCtrl);
+      c.add(widthCtrl);
+      c.add(styleCtrl);
+      c.add(colorCtrl);
+
+      return c;
+    },
+
+    /**
      * Creates a button control instance by id.
      *
      * @method createButton

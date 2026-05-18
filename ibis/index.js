@@ -117,6 +117,7 @@ import './src/ui/ButtonDialog.js';
 import './src/ui/RepeatableItem.js';
 import './src/ui/Repeatable.js';
 import './src/ui/CustomValue.js';
+import './src/ui/BorderBox.js';
 
 // ibis.*
 import './src/AddOnManager.js';
