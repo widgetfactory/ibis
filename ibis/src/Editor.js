@@ -10,7 +10,7 @@
 
 
 (function (ibis) {
-  
+
   // Shorten these names
   var DOM = ibis.DOM,
     Event = ibis.dom.Event,
@@ -281,7 +281,7 @@
         self.onSubmit.addToTop(function () {
           if (self.initialized) {
             self.save();
-            self.isNotDirty = true;
+            self.setDirty(false);
           }
         });
       }
@@ -319,7 +319,7 @@
             n.submit = function () {
               // Save all instances
               ibis.triggerSave();
-              self.isNotDirty = true;
+              self.setDirty(false);
 
               return self.formElement._mceOldSubmit(self.formElement);
             };
@@ -418,7 +418,7 @@
       }
 
 
-      function initPlugin(p) {                
+      function initPlugin(p) {
         var c = PluginManager.get(p),
           u = PluginManager.urls[p] || ibis.documentBaseURL.replace(/\/$/, ''),
           po;
@@ -1879,6 +1879,14 @@
     },
 
     /**
+     * Sets the dirty state of the editor.
+     * @param {Boolean} state True if the editor is dirty, false otherwise.
+     */
+    setDirty: function (state) {
+      this.isNotDirty = !state;
+    },
+
+    /**
      * Returns true/false if the editor is dirty or not. It will get dirty if the user has made modifications to the contents.
      *
      * @method isDirty
@@ -1888,11 +1896,7 @@
      *     alert("You must save your contents.");
      */
     isDirty: function () {
-      var self = this;
-
-      return ibis.trim(self.startContent) !== ibis.trim(self.getContent({
-        format: 'raw'
-      })) && !self.isNotDirty;
+      return !this.isNotDirty;
     },
 
     /**
