@@ -103,10 +103,16 @@
       m.settings.vp_offset_x = pos.x;
       m.settings.vp_offset_y = pos.y;
       m.settings.keyboard_focus = self._focused;
-      m.showMenu(0, e.offsetHeight);
+      m.showMenu(0, e.offsetHeight, 0, pos.y);
 
       Event.add(DOM.doc, 'mousedown', self.hideMenu, self);
       self.setState('Selected', 1);
+
+      if (DOM.hasClass('menu_' + m.id, 'mceMenuAbove')) {
+        DOM.addClass(self.id, 'mceMenuAbove');
+      } else {
+        DOM.removeClass(self.id, 'mceMenuAbove');
+      }
 
       self.isMenuVisible = 1;
 

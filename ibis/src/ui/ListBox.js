@@ -303,7 +303,7 @@
           DOM.setAttrib(this.id, 'aria-valuenow', item.title);
         }
 
-        if (self.menu) {          
+        if (self.menu) {
           self.menu.selectItem(self.menu.items[item.id], item.selected);
         }
 
@@ -442,7 +442,7 @@
 
       // find and clear input element
       input.value = '';
-      
+
       if (removetags) {
         DOM.remove(DOM.select('.mceButtonTag', this.id));
       }
@@ -518,7 +518,7 @@
     showMenu: function () {
       var self = this,
         pos, elm = DOM.get(this.id),
-        menu;
+        menu, prefix = this.classPrefix;
 
       if (this.isDisabled()) {
         return;
@@ -560,7 +560,15 @@
 
       Event.add(DOM.doc, 'mousedown', this.hideMenu, this);
 
-      DOM.addClass(this.id, this.classPrefix + 'Selected');
+      DOM.addClass(this.id, prefix + 'Selected');
+
+      window.setTimeout(function () {
+        if (DOM.hasClass('menu_' + menu.id, 'mceMenuAbove')) {
+          DOM.addClass(self.id, 'mceMenuAbove');
+        } else {
+          DOM.removeClass(self.id, 'mceMenuAbove');
+        }
+      }, 0);
 
       this.setAriaProperty('expanded', true);
     },
@@ -599,9 +607,10 @@
       var self = this,
         menu;
 
-        var cls = this.classPrefix + 'Menu' + (this.settings.menu_class ? ' ' + this.settings.menu_class : '');
+      var cm = this.settings.control_manager;
+      var cls = this.classPrefix + 'Menu' + (this.settings.menu_class ? ' ' + this.settings.menu_class : '');
 
-      menu = this.settings.control_manager.createDropMenu(this.id + '_menu', {
+      menu = cm.createDropMenu(this.id + '_menu', {
         class: cls,
         max_width: this.settings.max_width || 250,
         max_height: this.settings.max_height || '',
@@ -730,54 +739,54 @@
         });
 
         Event.add(this.id + '_input', 'keydown', function (evt) {
-        switch (evt.keyCode) {
-          // enter
-          case 13:
-            Event.cancel(evt);
-
-            if (this.value === "") {
-              self.showMenu();
-            } else {
-              if (self.settings.onselect(this.value) !== false) {
-                self.select(this.value);
-              }
-
-              self.hideMenu();
-
-              this.value = "";
-            }
-            break;
-          // down arrow
-          case 40:
-          case 38:
-            self.showMenu();
-            Event.cancel(evt);
-            self.menu.focus();
-            break;
-          // backspace
-          case 8:
-            // keep normal behaviour while input has a value
-            if (this.value) {
-              return;
-            }
-
-            var tags = DOM.select('button', evt.target.parentNode);
-
-            if (tags.length) {
-              var tag = tags.pop(), val = tag.value;
-
-              // remove tag
-              self.removeTag(tag);
-
+          switch (evt.keyCode) {
+            // enter
+            case 13:
               Event.cancel(evt);
 
-              // update value with tag value and focus
-              this.value = val;
-              this.focus();
-            }
+              if (this.value === "") {
+                self.showMenu();
+              } else {
+                if (self.settings.onselect(this.value) !== false) {
+                  self.select(this.value);
+                }
 
-            break;
-        }
+                self.hideMenu();
+
+                this.value = "";
+              }
+              break;
+            // down arrow
+            case 40:
+            case 38:
+              self.showMenu();
+              Event.cancel(evt);
+              self.menu.focus();
+              break;
+            // backspace
+            case 8:
+              // keep normal behaviour while input has a value
+              if (this.value) {
+                return;
+              }
+
+              var tags = DOM.select('button', evt.target.parentNode);
+
+              if (tags.length) {
+                var tag = tags.pop(), val = tag.value;
+
+                // remove tag
+                self.removeTag(tag);
+
+                Event.cancel(evt);
+
+                // update value with tag value and focus
+                this.value = val;
+                this.focus();
+              }
+
+              break;
+          }
         });
       } // end combobox input handlers
 
