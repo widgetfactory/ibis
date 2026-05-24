@@ -261,6 +261,13 @@
       // clear selection
       self.selected = [];
 
+      if (s.fetchItems) {
+        self.removeAll();
+        each(s.fetchItems(), function (item) {
+          self.add(item);
+        });
+      }
+
       if (!self.rendered) {
         co = DOM.add(self.settings.container, self.renderNode());
 
@@ -298,6 +305,21 @@
         if ((y + s.vp_offset_y + h) > my) {
           y = py ? py - h - 8 : Math.max(0, (my - s.vp_offset_y) - h);
         }
+      }
+
+      // Flip above the control if the menu extends below the viewport bottom and the page is not scrolled
+      if (py && vp.y === 0 && (y + co.clientHeight) > (vp.y + vp.h)) {
+        y = py - co.clientHeight;
+        DOM.addClass(co, cp + 'Above');
+      } else {
+        DOM.removeClass(co, cp + 'Above');
+      }
+
+      // use fixed positioning if the menu originates in a modal
+      if (document.querySelector('.mceModal')) {
+        x -= vp.x;
+        y -= vp.y;
+        DOM.setStyle(co, 'position', 'fixed');
       }
 
       DOM.setStyles(co, {
@@ -539,6 +561,17 @@
       Event.remove(co, 'keydown', self._keyDownHandler);
 
       DOM.remove(co);
+    },
+
+    removeAll: function () {
+      var self = this,
+        itemsContainer = DOM.get('menu_' + self.id + '_items');
+
+      if (itemsContainer) {
+        DOM.setHTML(itemsContainer, '');
+      }
+
+      self.items = {};
     },
 
     /**
