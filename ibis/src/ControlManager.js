@@ -850,6 +850,36 @@
       return self.add(c);
     },
 
+    createSizeBox: function (id, s, cc) {
+      var self = this,
+        ed = self.editor,
+        c, cls;
+
+      id = self.prefix + id;
+
+      c = self.get(id);
+
+      if (c) {
+        return c;
+      }
+
+      s.title = ed.translate(s.title);
+      s.label = ed.translate(s.label);
+      s.scope = s.scope || ed;
+
+      s = extend({
+        title: s.title,
+        'class': 'mce_' + id,
+        scope: s.scope,
+        control_manager: self
+      }, s);
+
+      cls = cc || ibis.ui.SizeBox;
+      c = new cls(id, s, ed);
+
+      return self.add(c);
+    },
+
     /**
      * Creates a panel container control instance by id.
      *

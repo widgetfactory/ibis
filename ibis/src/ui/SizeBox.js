@@ -53,7 +53,7 @@
        */
       this.onPostRender = new Dispatcher(this);
 
-      this.classPrefix = 'mceTextBox';
+      this.classPrefix = 'mceSizeBox';
     },
 
     /**
@@ -63,11 +63,25 @@
      * @param {String/function} val Value to set for the textbox.
      */
     value: function (val) {
+      var self = this;
+      
       if (!arguments.length) {
-        return DOM.getValue(this.id);
+        var values = {
+          'width' : DOM.get(this.id + '_width').value,
+          'height': DOM.get(this.id + '_height').value
+        };
+
+        return values;
       }
 
-      DOM.setValue(this.id, val);
+      if (typeof val === 'object') {
+        each(['width', 'height'], function (name) {
+          var value = val[name] || '';
+          DOM.setValue(self.id + '_' + name, value);
+        });
+
+        return this;
+      }
     },
 
     /**
@@ -78,26 +92,93 @@
      * @return {String} HTML for the text control element.
      */
     renderHTML: function () {
-      var html = '',
+      var self = this, html = '',
         prefix = this.classPrefix, s = this.settings;
 
       var type = s.subtype ? s.subtype : 'text';
+
+      html += '<div class="' + prefix + '">';
+
+      var controls = [];
 
       each(['width', 'height'], function (name) {
 
         var attribs = extend({
           type: type,
-          class: prefix + ' ' + s['class'],
+          class: 'mceTextBox ' + s['class'],
           tabindex: 0
         }, s.attributes || {});
 
-        attribs.id = this.id + '_' + name;
+        attribs.id = self.id + '_' + name;
         attribs.name = name;
 
-        html += DOM.createHTML('input', attribs);
+        controls.push(DOM.createHTML('input', attribs));
       });
 
+      html += controls.join('<span class="mceSeparator">x</span>');
+
+      // add a checkbox to trigger proportional sizing
+      html += '<input type="checkbox" id="' + self.id + '_proportional" class="mceCheckBox" />';
+
+      html += '</div>';
+
       return html;
+    },
+
+    updateSize: function (name, fromInput) {
+      var other, tmp, temp;
+
+      // get the value of the current input element
+      var value = DOM.get(this.id + '_' + name).value;
+
+      var values = this.value(),
+        constrain = DOM.get(this.id + '_proportional').checked;
+
+      for (var key in values) {
+        if (key === name) {
+          tmp = values[key];
+
+          values[key] = value;
+        } else {
+          other = DOM.get(this.id + '_' + key).value;
+          values[key] = other;
+        }
+      }
+
+      // update values
+      this.value(values);
+
+      // passed in value, not altered
+      if (!fromInput) {
+        return;
+      }
+
+      if (tmp && value && other) {
+
+        if (value.indexOf('%') !== -1 || other.indexOf('%') !== -1) {
+          return;
+        }
+
+        if (constrain) {
+          temp = ((value / tmp) * other).toFixed(0);
+        }
+      }
+
+      for (var key in values) {
+        if (key === name) {
+          values[key] = value;
+        } else {
+          values[key] = temp || other;
+
+          // set the other field
+          if (temp) {
+            DOM.setValue(this.id + '_' + key, temp);
+          }
+        }
+      }
+
+      // update values
+      this.value(values);
     },
 
     /**
@@ -113,14 +194,20 @@
         this.value(s.value);
       }
 
+      each(['width', 'height'], function (name) {
+        Event.add(self.id + '_' + name, 'change', function (e) {
+          var fromInput = !!e.target.nodeType;
+
+          self.updateSize(name, fromInput);
+
+          self.onChange.dispatch(self, this);
+        });
+      });
+
       if (s.onchange && typeof s.onchange === 'function') {
         this.onChange.add(s.onchange);
       }
 
-      Event.add(this.id, 'change', function () {
-        self.onChange.dispatch(this, DOM.get(self.id));
-      });
-      
       this.onPostRender.dispatch(this, DOM.get(this.id));
     },
 
