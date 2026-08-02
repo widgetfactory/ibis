@@ -37,7 +37,6 @@ import './src/html/FilterNode.js';
 import './src/html/InvalidNodes.js';
 import './src/html/Sanitizer.js';
 import './src/html/DomParser.js';
-import './src/html/NativeDomParser.js';
 import './src/html/Serializer.js';
 import './src/html/Writer.js';
 
@@ -102,6 +101,7 @@ import './src/ui/NativeListBox.js';
 import './src/ui/TextBox.js';
 import './src/ui/UrlBox.js';
 import './src/ui/CheckBox.js';
+import './src/ui/Radio.js';
 import './src/ui/ColorPicker.js';
 import './src/ui/MenuButton.js';
 import './src/ui/SplitButton.js';
