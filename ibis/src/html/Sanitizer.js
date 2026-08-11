@@ -39,9 +39,62 @@ import DOMPurify from "dompurify";
      * @param {ibis.html.Schema} schema - HTML schema for validation.
      */
     ibis.html.Sanitizer = function (settings, schema) {
+        var self = this;
+
         var special = schema.getSpecialElements();
 
         var uid = 0;
+
+        /**
+         * Direction of event attribute handling for this instance.
+         *
+         * "store"   - content entering the editor, so an event attribute is stored as data-mce-on*
+         *             and cannot run while editing
+         * "restore" - content leaving the editor, so a stored attribute becomes a handler again
+         * null      - neither, for content that is only being validated
+         *
+         * @property mode
+         * @type String
+         */
+        self.mode = null;
+
+        /**
+         * Moves event attributes between their live and stored names.
+         *
+         * A stored attribute arriving from outside is always dropped, as only the editor can
+         * produce one, so a forged or stale value can never become a handler on the way out.
+         *
+         * @param {Element} node Element to process.
+         */
+        function moveEventAttributes(node) {
+            if (!self.mode) {
+                return;
+            }
+
+            var attrs = node.attributes, i, name, tag = node.tagName.toLowerCase();
+
+            for (i = attrs.length - 1; i >= 0; i--) {
+                name = attrs[i].name.toLowerCase();
+
+                if (name.indexOf('data-mce-on') === 0) {
+                    if (self.mode === 'restore' && settings.allow_event_attributes) {
+                        node.setAttribute(name.substr(9), attrs[i].value);
+                    }
+
+                    node.removeAttribute(name);
+
+                    continue;
+                }
+
+                if (self.mode === 'store' && name.indexOf('on') === 0) {
+                    if (settings.allow_event_attributes && schema.isValid(tag, name)) {
+                        node.setAttribute('data-mce-' + name, attrs[i].value);
+                    }
+
+                    node.removeAttribute(name);
+                }
+            }
+        }
 
         function isBooleanAttribute(name) {
             var boolAttrMap = schema.getBoolAttrs();
@@ -110,6 +163,9 @@ import DOMPurify from "dompurify";
                 return;
             }
 
+            // before any of the skips below, so internal nodes are covered too
+            moveEventAttributes(node);
+
             var tag = node.tagName.toLowerCase();
 
             // skip body tag
@@ -137,20 +193,27 @@ import DOMPurify from "dompurify";
 
             // always remove bogus nodes
             if (node.hasAttribute('data-mce-bogus')) {
-                removeNode(node);
+                if (!evt) {
+                    removeNode(node);
+                }
+                // In hook context: omitting allowedTags entry lets DOMPurify
+                // remove the element; FORBID_CONTENTS / KEEP_CONTENT governs children.
                 return;
             }
 
             var rule = schema.getElementRule(tag);
 
             if (settings.validate && !rule) {
-                if (tag in special) {
-                    // Special elements are always removed
-                    removeNode(node);
-                } else {
-                    // unwrap others
-                    removeNode(node, true);
+                if (!evt) {
+                    if (tag in special) {
+                        // Special elements are always removed
+                        removeNode(node);
+                    } else {
+                        // unwrap others
+                        removeNode(node, true);
+                    }
                 }
+                // In hook context: don't set allowedTags — DOMPurify removes the element.
                 return;
             } else {
                 if (evt) {
@@ -184,26 +247,40 @@ import DOMPurify from "dompurify";
                         return node.hasAttribute(attr.name);
                     })
                 ) {
-                    removeNode(node, true);
+                    if (evt) {
+                        evt.allowedTags[tag] = false; // DOMPurify unwraps
+                    } else {
+                        removeNode(node, true);
+                    }
                     return;
                 }
 
                 // Unwrap and remove if all attributes should be stripped and none remain
                 if (rule.removeEmptyAttrs && node.attributes.length === 0) {
-                    removeNode(node, true);
+                    if (evt) {
+                        evt.allowedTags[tag] = false; // DOMPurify unwraps
+                    } else {
+                        removeNode(node, true);
+                    }
                     return;
                 }
 
-                // Rename element if schema defines a different outputName
+                // Rename element if schema defines a different outputName.
+                // In hook context, mark for a post-sanitize pass to avoid interfering
+                // with DOMPurify's live tree walk.
                 if (rule.outputName && rule.outputName !== tag) {
-                    var newNode = document.createElement(rule.outputName);
+                    if (evt) {
+                        node.setAttribute('data-mce-rename', rule.outputName);
+                    } else {
+                        var newNode = document.createElement(rule.outputName);
 
-                    while (node.firstChild) {
-                        newNode.appendChild(node.firstChild);
+                        while (node.firstChild) {
+                            newNode.appendChild(node.firstChild);
+                        }
+
+                        node.parentNode.replaceChild(newNode, node);
+                        node = newNode;
                     }
-
-                    node.parentNode.replaceChild(newNode, node);
-                    node = newNode;
                 }
             }
         }
@@ -312,10 +389,6 @@ import DOMPurify from "dompurify";
                 config.FORCE_BODY = true; // Force body to be present for script/style tags
             }
 
-            each(schema.getValidElements(), function (rule, tag) {
-                config.ALLOWED_TAGS.push(tag);   
-            });
-
             return config;
         }
 
@@ -363,6 +436,27 @@ import DOMPurify from "dompurify";
             }
 
             purifier.sanitize(body, purifyConfig);
+
+            // Rename elements that were marked by processNode during the hook pass
+            // (replaceChild is deferred to avoid interfering with DOMPurify's tree walk).
+            var toRename = body.querySelectorAll ? body.querySelectorAll('[data-mce-rename]') : [];
+            var r = toRename.length;
+            while (r--) {
+                var orig = toRename[r];
+                var outputName = orig.getAttribute('data-mce-rename');
+                orig.removeAttribute('data-mce-rename');
+                var renamed = document.createElement(outputName);
+                var attrs = orig.attributes;
+                for (var a = attrs.length - 1; a >= 0; a--) {
+                    renamed.setAttribute(attrs[a].name, attrs[a].value);
+                }
+                while (orig.firstChild) {
+                    renamed.appendChild(orig.firstChild);
+                }
+                if (orig.parentNode) {
+                    orig.parentNode.replaceChild(renamed, orig);
+                }
+            }
 
             purifier.removed = [];
 

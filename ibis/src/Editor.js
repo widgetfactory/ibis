@@ -201,6 +201,42 @@
 
   ibis.Editor.prototype = {
     /**
+     * Creates a DomParser with the rules that must apply to any content entering the editor.
+     * Callers can add their own filters to the returned parser.
+     *
+     * @method createParser
+     * @param {Object} settings Optional settings, defaults to the editor settings.
+     * @return {ibis.html.DomParser} Parser instance.
+     */
+    createParser: function (settings) {
+      var self = this,
+        parser = new ibis.html.DomParser(settings || self.settings, self.schema);
+
+      // this content is on its way into the editor, so event attributes must not stay live
+      parser.sanitizer.mode = 'store';
+
+      // Strip forged data-mce-src, data-mce-href and data-mce-style on input
+      parser.addAttributeFilter('data-mce-src,data-mce-href,data-mce-style', function (nodes, name) {
+        var i = nodes.length;
+        while (i--) {
+          nodes[i].attr(name, null);
+        }
+      });
+
+      // Remove legacy protected comments, nothing creates them now
+      parser.addNodeFilter('#comment', function (nodes) {
+        var i = nodes.length;
+        while (i--) {
+          if (/^\s*mce:protected\b/i.test(nodes[i].value)) {
+            nodes[i].remove();
+          }
+        }
+      });
+
+      return parser;
+    },
+
+    /**
      * Renderes the editor/adds it to the page.
      *
      * @method render
@@ -716,7 +752,7 @@
        * @property parser
        * @type ibis.html.DomParser
        */
-      self.parser = new ibis.html.DomParser(settings, self.schema);
+      self.parser = self.createParser(settings);
 
       // Convert src and href into data-mce-src, data-mce-href and data-mce-style
       self.parser.addAttributeFilter('src,href,style', function (nodes, name) {
@@ -745,17 +781,6 @@
           }
         }
       });
-
-      // Keep scripts from executing - removed as this is handled by the Code plugin by placeholder conversion
-      /*self.parser.addNodeFilter('script', function (nodes) {
-        var i = nodes.length,
-          node;
-
-        while (i--) {
-          node = nodes[i];
-          node.attr('type', 'mce-' + (node.attr('type') || 'text/javascript'));
-        }
-      });*/
 
       self.parser.addNodeFilter('#cdata', function (nodes) {
         var i = nodes.length,
@@ -884,16 +909,6 @@
 
       if (settings.nowrap) {
         body.style.whiteSpace = "nowrap";
-      }
-
-      if (settings.protect) {
-        self.onBeforeSetContent.add(function (ed, o) {
-          each(settings.protect, function (pattern) {
-            o.content = o.content.replace(pattern, function (str) {
-              return '<!--mce:protected ' + escape(str) + '-->';
-            });
-          });
-        });
       }
 
       // Add visual aids when new contents is added
@@ -1080,8 +1095,16 @@
      */
     getParam: function (n, dv, ty) {
       var tr = ibis.trim,
-        v = is(this.settings[n]) ? this.settings[n] : dv,
-        o;
+        v, o;
+
+      if (n.indexOf('.') > 0) {
+        v = n.split('.').reduce(function (obj, key) {
+          return is(obj) && is(obj[key]) ? obj[key] : undefined;
+        }, this.settings);
+        v = is(v) ? v : dv;
+      } else {
+        v = is(this.settings[n]) ? this.settings[n] : dv;
+      }
 
       if (ty === 'hash') {
         o = {};

@@ -105,6 +105,9 @@
 
     htmlParser = new ibis.html.DomParser(settings, schema);
 
+    // this is the way out of the editor, so stored event attributes become handlers again
+    htmlParser.sanitizer.mode = 'restore';
+
     // Convert tabindex back to elements when serializing contents
     htmlParser.addAttributeFilter('data-mce-tabindex', function (nodes, name) {
       var i = nodes.length,
@@ -259,11 +262,8 @@
           node.name = '#cdata';
           node.type = 4;
           node.value = node.value.replace(/^\[CDATA\[|\]\]$/g, '');
-        } else if (node.value.indexOf('mce:protected ') === 0) {
-          node.name = "#text";
-          node.type = 3;
-          node.raw = true;
-          node.value = unescape(node.value).substr(14);
+        } else if (/^\s*mce:protected\b/i.test(node.value)) {
+          node.remove();
         }
       }
     });
