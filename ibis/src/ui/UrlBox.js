@@ -107,8 +107,7 @@
 
       if (s.picker) {
         DOM.addClass(this.id, 'mceUrlBoxPicker');
-
-        Event.add(this.id + '_picker', 'click', function (e) {          
+        Event.add(this.id + '_picker', 'click', function (e) {      
           
           e.preventDefault();
           s.onpick.call(self);

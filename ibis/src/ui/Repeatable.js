@@ -96,16 +96,24 @@
     postRender: function () {
       var self = this, elm = dom.get(this.id);
 
-      dom.bind(elm, 'click', function (e) {
-        e.preventDefault();
+      this._super();
 
+      dom.bind(elm, 'click', function (e) {
         var btn = dom.getParent(e.target, 'button');
 
         if (!btn) {
           return;
         }
 
-        var ctrlElm = btn.parentNode, index = dom.nodeIndex(ctrlElm);
+        var ctrlElm = btn.parentNode;
+
+        if (!dom.hasClass(ctrlElm, 'mceRepeatableItem')) {
+          return;
+        }
+
+        e.preventDefault();
+
+        var index = dom.nodeIndex(ctrlElm);
 
         if (index == 0) {
           self.addItem();

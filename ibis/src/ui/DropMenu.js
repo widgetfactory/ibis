@@ -250,7 +250,7 @@
       var self = this,
         s = self.settings,
         co, vp = DOM.getViewPort(),
-        w, h, mx, my, ot = 0, cp = self.classPrefix;
+        w, h, mx, my, ot = 0, cp = self.classPrefix, trigger = s.trigger;
 
       self.collapse(1);
 
@@ -291,6 +291,16 @@
       x += s.offset_x || 0;
       y += s.offset_y || 0;
 
+      // If a trigger element is set, use getBoundingClientRect for pixel-accurate
+      // document-relative coordinates. The offsetParent loop in DOM.getPos stops at
+      // fixed-position ancestors without adding page scroll, so any page scroll causes
+      // pos.x/pos.y to be short by that amount.
+      if (trigger) {
+        var trigRect = trigger.getBoundingClientRect();
+        x = trigRect.left + vp.x;
+        y = trigRect.bottom + vp.y;
+      }
+
       // Move inside viewport if not submenu
       if (s.constrain) {
         w = co.clientWidth - ot;
@@ -315,10 +325,25 @@
         DOM.removeClass(co, cp + 'Above');
       }
 
-      // use fixed positioning if the menu originates in a modal
-      if (document.querySelector('.mceModal')) {
-        x -= vp.x;
-        y -= vp.y;
+      // use fixed positioning if the trigger is inside a modal
+      var modal = document.querySelector('.mceModal');
+
+      if (modal && trigger && modal.contains(trigger)) {
+        var rect = trigger.getBoundingClientRect();
+        x = rect.left;
+        y = rect.bottom;
+
+        if (x + co.clientWidth > vp.w) {
+          x = Math.max(0, rect.right - co.clientWidth);
+        }
+
+        if (y + co.clientHeight > vp.h) {
+          y = rect.top - co.clientHeight;
+          DOM.addClass(co, cp + 'Above');
+        } else {
+          DOM.removeClass(co, cp + 'Above');
+        }
+
         DOM.setStyle(co, 'position', 'fixed');
       }
 
@@ -564,12 +589,16 @@
     },
 
     removeAll: function () {
-      var self = this,
-        itemsContainer = DOM.get('menu_' + self.id + '_items');
+      var self = this;
+      // itemsContainer = DOM.get('menu_' + self.id + '_items');
 
-      if (itemsContainer) {
-        DOM.setHTML(itemsContainer, '');
-      }
+      // if (itemsContainer) {
+      //   DOM.setHTML(itemsContainer, '');
+      // }
+
+      each(self.items, function (item) {
+        item.destroy();
+      });
 
       self.items = {};
     },
@@ -703,6 +732,42 @@
       this.keyboardNav.update(items);
     },
 
+    _reposition: function () {
+      var self = this,
+        co = DOM.get('menu_' + self.id),
+        trigger = self.settings.trigger,
+        cp, vp, rect, y, isFixed;
+
+      if (!co || !trigger || !self.isMenuVisible) {
+        return;
+      }
+
+      cp = self.classPrefix;
+      vp = DOM.getViewPort();
+      rect = trigger.getBoundingClientRect();
+      isFixed = DOM.getStyle(co, 'position', true) === 'fixed';
+
+      if (isFixed) {
+        y = rect.bottom;
+        if (y + co.clientHeight > vp.h) {
+          y = rect.top - co.clientHeight;
+          DOM.addClass(co, cp + 'Above');
+        } else {
+          DOM.removeClass(co, cp + 'Above');
+        }
+      } else {
+        y = rect.bottom + vp.y;
+        if (rect.bottom + co.clientHeight > vp.h) {
+          y = rect.top + vp.y - co.clientHeight;
+          DOM.addClass(co, cp + 'Above');
+        } else {
+          DOM.removeClass(co, cp + 'Above');
+        }
+      }
+
+      DOM.setStyle(co, 'top', y);
+    },
+
     clearFilteredItems: function () {
       each(this.items, function (o, id) {
         DOM.removeClass(id, 'mceMenuItemHidden');
@@ -711,6 +776,8 @@
       if (this.keyboardNav) {
         this._updateKeyboardNav();
       }
+
+      this._reposition();
     },
 
     filterItems: function (value) {
@@ -741,6 +808,7 @@
       });
 
       this._updateKeyboardNav();
+      this._reposition();
     },
 
     _keyDownHandler: function (evt) {
@@ -906,7 +974,9 @@
         }
       }
 
-      DOM.addClass(item, s['class']);
+      if (s['class']) {
+        DOM.addClass(item, s['class']);
+      }
 
       if (o.onmouseover) {
         Event.add(item, 'mouseover', o.onmouseover);

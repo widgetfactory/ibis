@@ -38,12 +38,16 @@
       var html = '';
 
       html += this.controls[0].renderHTML();
-      html += '<button class="mceButton"><span role="presentation" class="mceIcon mce_plus"></span><span role="presentation" class="mceIcon mce_trash"></span></button>';
+      html += '<button class="mceButton"><span role="presentation" class="mceIcon mceIcon-small mce_plus"></span><span role="presentation" class="mceIcon mceIcon-small mce_trash"></span></button>';
 
       return DOM.createHTML('div', {
         id: this.id,
         class: 'mceRepeatableItem mceForm mceFormRow'
       }, html);
+    },
+
+    postRender: function () {
+      this.controls[0].postRender();
     },
 
     value: function (value) {

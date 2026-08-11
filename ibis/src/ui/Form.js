@@ -44,11 +44,13 @@
 
         html += '<div class="mceFormRow">';
 
-        if (s.label && ctrl.type !== 'checkbox') {
+        var isToggle = ctrl.type === 'checkbox' || ctrl.type === 'radio';
+
+        if (s.label && !isToggle) {
           html += '<label for="' + ctrl.id + '" id="' + ctrl.id + '_label">' + dom.encode(s.label) + '</label>';
         }
 
-        if (s.label && ctrl.type === 'checkbox' && s.label_position === 'before') {
+        if (s.label && isToggle && s.label_position === 'before') {
           html += '<label for="' + ctrl.id + '" id="' + ctrl.id + '_label">' + dom.encode(s.label) + '</label>';
         }
 
@@ -56,7 +58,7 @@
         html += ctrl.renderHTML();
         html += '	</div>';
 
-        if (s.label && ctrl.type === 'checkbox' && s.label_position !== 'before') {
+        if (s.label && isToggle && s.label_position !== 'before') {
           html += '<label for="' + ctrl.id + '" id="' + ctrl.id + '_label">' + dom.encode(s.label) + '</label>';
         }
 
@@ -70,6 +72,15 @@
       }, html);
     },
 
+    value: function (data) {
+      if (arguments.length) {
+        this.update(data);
+        return this;
+      }
+
+      return this.submit();
+    },
+
     submit: function () {
       var i, data = {};
 
@@ -77,7 +88,10 @@
         var ctrl = this.controls[i];
 
         if (typeof ctrl.value === 'function') {
-          data[ctrl.name] = ctrl.value();
+          var val = ctrl.value();
+          if (val !== undefined) {
+            data[ctrl.name] = val;
+          }
         }
       }
 

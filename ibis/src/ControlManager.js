@@ -243,11 +243,9 @@
 
       if (!s.onselect) {
         s.onselect = function (v) {
-          if (!s.cmd) {
-            return false;
+          if (s.cmd) {
+            ed.execCommand(s.cmd, s.ui || false, v || s.value);
           }
-
-          ed.execCommand(s.cmd, s.ui || false, v || s.value);
         };
       }
 
@@ -807,6 +805,35 @@
 
       cls = ibis.ui.CheckBox;
       c = new cls(id, s, ed);
+
+      return self.add(c);
+    },
+
+    createRadio: function (id, s) {
+      var self = this,
+        ed = self.editor,
+        c;
+
+      c = self.get(id);
+
+      if (c) {
+        return c;
+      }
+
+      s.title = ed.translate(s.title);
+      s.label = ed.translate(s.label);
+      s.scope = s.scope || ed;
+
+      s = extend({
+        title: s.title,
+        'class': 'mce_' + id,
+        scope: s.scope,
+        control_manager: self
+      }, s);
+
+      id = self.prefix + id;
+
+      c = new ibis.ui.Radio(id, s, ed);
 
       return self.add(c);
     },

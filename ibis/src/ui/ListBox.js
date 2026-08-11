@@ -538,6 +538,7 @@
       menu = this.menu;
       menu.settings.offset_x = pos.x;
       menu.settings.offset_y = pos.y;
+      menu.settings.trigger = elm;
 
       if (!this.settings.max_width) {
         menu.settings.max_width = elm.offsetWidth;
