@@ -120,7 +120,7 @@ import DOMPurify from "dompurify";
             }
 
             // Event handlers: only keep if allowed and defined in schema
-            if (/^on[a-z]+/i.test(attrName)) {
+            if (/^on[a-z]+/i.test(attrName) || attrName.indexOf('on') === 0) {
                 if (settings.allow_event_attributes && schema.isValid(tagName, attrName)) {
                     return true;
                 }
