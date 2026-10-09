@@ -865,6 +865,8 @@
       self.forceBlocks = new ibis.ForceBlocks(self);
       self.enterKey = new ibis.EnterKey(self);
       // internal with no external interface
+      self._normalizeSpace = new ibis.NormalizeSpace(self);
+      // internal with no external interface
       self._nodeChangeDispatcher = new ibis.NodeChange(self);
       self.editorCommands = new ibis.EditorCommands(self);
       // internal with no external interface
